@@ -46,13 +46,13 @@ bash get_deeplabv3plus.sh
 ```text
 mmdetection3d/
 ├── checkpoints/                   
-│   └── deeplabv3plus_r101_cityscapes.pth  <-- [模型权重]
+│   └── deeplabv3plus_xxx.pth  <-- [模型权重]
 ├── configs_seg/                           <-- [分割配置] 从 mmseg 提取的完整配置包
 │   ├── _base_/ ...
 │   └── deeplabv3plus/ ...
 ├── data/
 │   └── kitti/ ...                         <-- 数据集放这里
-├── painting_mmdet3d_stereo.py             <-- [核心脚本]
+├── painting_mmdet3d.py             <-- [核心脚本]
 └── ...
 ```
 
