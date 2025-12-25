@@ -54,6 +54,7 @@ class Pack3DDetInputs(BaseTransform):
     INSTANCEDATA_2D_KEYS = [
         'gt_bboxes',
         'gt_bboxes_labels',
+        'cam_instances'
     ]
 
     SEG_KEYS = [
@@ -146,16 +147,20 @@ class Pack3DDetInputs(BaseTransform):
                 results['points'] = results['points'].tensor
 
         if 'img' in results:
+            # 情况 A: 原始 List 状态 (H, W, C) x 6
             if isinstance(results['img'], list):
-                # process multiple imgs in single frame
-                imgs = np.stack(results['img'], axis=0)
-                if imgs.flags.c_contiguous:
-                    imgs = to_tensor(imgs).permute(0, 3, 1, 2).contiguous()
-                else:
-                    imgs = to_tensor(
-                        np.ascontiguousarray(imgs.transpose(0, 3, 1, 2)))
-                results['img'] = imgs
-            else:
+                # 你的原有逻辑：打印 111111
+                imgs = np.stack(results['img'], axis=0)  # 变成 (6, H, W, 3)
+                results['img'] = to_tensor(np.ascontiguousarray(imgs.transpose(0, 3, 1, 2)))
+
+            # 情况 B: 被 DataLoader 自动合并后的 4D Numpy (6, H, W, 3)
+            # 这就是你那个随机报错的根源！
+            elif isinstance(results['img'], np.ndarray) and results['img'].ndim == 4:
+                # 按照多图逻辑转置 (N, H, W, C) -> (N, C, H, W)
+                results['img'] = to_tensor(np.ascontiguousarray(results['img'].transpose(0, 3, 1, 2)))
+
+            # 情况 C: 真正的单图状态 (H, W, 3)
+            elif isinstance(results['img'], np.ndarray) and results['img'].ndim == 3:
                 img = results['img']
                 if len(img.shape) < 3:
                     img = np.expand_dims(img, -1)

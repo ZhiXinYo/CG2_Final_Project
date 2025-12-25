@@ -70,3 +70,19 @@ python painting_mmdet3d.py
 
 *   **Model Training**: 修改 PointPillars Config，尝试训练
 *   **Innovation**: 修改 `painting_mmdet3d.py`，优化算法
+
+## 5. Yolo + PaintingPointPillars
+1. 安装mmyolo。
+```bash
+mim install "mmyolo"
+```
+2. 按照mmdet3d的格式预处理nus数据集。
+3. 对val标签进行预处理。
+```bash
+python tools/nus2coco.py
+```
+4. 按需调整configs/pointpainting/yolo_painter_nus.py配置文件。（调整version为v1.0-trainval, img_scale优先选择大一点的，实在不行选择小的, batch_size看情况调整)
+5. 执行训练命令。
+```bash
+python tools/train.py configs/pointpainting/yolo_painter_nus.py
+```

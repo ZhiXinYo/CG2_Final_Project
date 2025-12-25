@@ -6,8 +6,8 @@ from mmseg.apis import inference_model, init_model
 import mmcv
 
 # ================= 配置区域 =================
-DEVICE = "cuda:3"
-DATA_ROOT = "data/kitti/training/" 
+DEVICE = "cuda:7"
+DATA_ROOT = "data/kitti/training/"  # data/nuscenes/samples/
 SEG_CONFIG = 'configs_seg/deeplabv3plus/deeplabv3plus_r101-d8_4xb2-80k_cityscapes-512x1024.py'
 SEG_CHECKPOINT = 'checkpoints/deeplabv3plus_r101-d8_512x1024_80k_cityscapes_20200606_114143-068fcfe9.pth'
 

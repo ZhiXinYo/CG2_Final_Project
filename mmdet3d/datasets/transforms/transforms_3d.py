@@ -2328,7 +2328,10 @@ class MultiViewWrapper(BaseTransform):
             dict: output dict after transformtaion
         """
         # store the augmentation related keys for each image.
+        tmp_input_dict = {}
         for key in self.collected_keys:
+            if key in input_dict:
+                tmp_input_dict[key] = input_dict[key][:] if isinstance(input_dict[key], list) else input_dict[key]
             if key not in input_dict or \
                     not isinstance(input_dict[key], list):
                 input_dict[key] = []
@@ -2362,6 +2365,13 @@ class MultiViewWrapper(BaseTransform):
                         input_dict[key][img_id] = process_dict[key]
                     else:
                         input_dict[key].append(process_dict[key])
+
+            for key in self.collected_keys:
+                if key not in process_dict and key in tmp_input_dict:
+                    if isinstance(tmp_input_dict[key], list):
+                        input_dict[key].append(tmp_input_dict[key][img_id])
+                    else:
+                        input_dict[key].append(tmp_input_dict[key])
 
         for key in self.collected_keys:
             if len(input_dict[key]) == 0:
