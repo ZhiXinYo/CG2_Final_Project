@@ -69,6 +69,23 @@ python paint_kitti.py
 ## 4. 构建GT_DataBase（适配 8D 数据）
 确保已经按照[mmdet3d官方文档](https://mmdet3dtai.readthedocs.io/en/latest/datasets/kitti_det.html)处理好Kitti数据集结构
 
+注意：需要额外准备 image_3 和 OpenPCDet 提供的[planes](https://drive.google.com/file/d/1d5mq0RXRnvHPVeKx6Q612z0YRO1t2wAp/view?usp=sharing)数据，文件结构大致如下：
+```
+mmdetection3d
+├── data
+│   ├── kitti
+│   │   │── ImageSets
+│   │   │── training
+│   │   │   ├── calib
+│   │   │   ├── image_2
+│   │   │   ├── image_3
+│   │   │   ├── label_2
+│   │   │   ├── velodyne
+│   │   │   ├── planes
+│   │   │── kitti_infos_train.pkl
+│   │   │── kitti_info_val.pkl
+```
+
 执行以下命令构建GT_DataBase（确保路径都正确）
 ```bash
 python tools/create_painted_database.py
