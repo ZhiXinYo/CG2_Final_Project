@@ -8,9 +8,6 @@ from PIL import Image
 # MMDetection3D / MMSegmentation 1.x APIs
 from mmseg.apis import init_model, inference_model
 
-# -------------------------------------------------------------------------
-# KITTI Calibration (完全复刻原仓库 calibration_kitti.py 逻辑)
-# -------------------------------------------------------------------------
 def get_calib_from_file(calib_file):
     with open(calib_file, 'r') as f:
         lines = f.readlines()
@@ -29,9 +26,6 @@ def get_calib_from_file(calib_file):
     calib['Tr_velo_to_cam'] = np.concatenate([obj['Tr_velo_to_cam'].reshape(3, 4), np.array([[0., 0., 0., 1.]])], axis=0)
     return calib
 
-# -------------------------------------------------------------------------
-# Painter 类 (1:1 复刻原仓库逻辑)
-# -------------------------------------------------------------------------
 class Painter:
     def __init__(self, config, checkpoint, device='cuda:3'):
         self.root_path = 'data/kitti_painted/training/'
@@ -148,10 +142,7 @@ class Painter:
             scores_r = self.get_score(idx, "image_3/")
             calib = get_calib_from_file(os.path.join(self.root_path, 'calib', f'{idx}.txt'))
             
-            # 核心融合
             painted_points = self.augment_lidar_class_scores_both(scores_r, scores_l, points, calib)
-            
-            # 保存为 bin (MMDet3D 友好格式)
             painted_points.astype(np.float32).tofile(os.path.join(self.save_path, f'{idx}.bin'))
 
 if __name__ == '__main__':

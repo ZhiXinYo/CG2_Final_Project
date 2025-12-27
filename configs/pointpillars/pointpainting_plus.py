@@ -39,11 +39,16 @@ train_pipeline = [
         use_dim=8,
         backend_args=backend_args),
     dict(type='LoadAnnotations3D', with_bbox_3d=True, with_label_3d=True),
-    dict(type='MultiBinDistanceSampling', 
-         bin_edges=[0, 20, 35, 50, 70],  # 分为四个区间
-         keep_rates=[0.25, 0.4, 0.8, 1.0] # 0-20m留25%，20-35m留40%，以此类推
-    ),
+    # dict(type='MultiBinDistanceSampling', 
+    #     #  bin_edges=[0, 20, 35, 50, 70],  # 分为四个区间
+    #     #  keep_rates=[0.25, 0.4, 0.8, 1.0] # 0-20m留25%，20-35m留40%，以此类推
+    #      bin_edges=[0, 30, 70], keep_rates=[0.2, 1.0]
+    # ),
     dict(type='ObjectSample', db_sampler=db_sampler, use_ground_plane=True),
+    dict(type='SemanticAwareDistanceSampling', 
+         dist_threshold=30.0, 
+         keep_ratio_bg=0.4,
+         feat_channels=4),
     dict(type='RandomFlip3D', flip_ratio_bev_horizontal=0.5),
     dict(
         type='GlobalRotScaleTrans',
