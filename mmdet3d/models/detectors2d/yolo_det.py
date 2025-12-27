@@ -524,7 +524,7 @@ class YoloPointPainter(MVXTwoStageDetector):
 
             # 挂载 2D 结果（CocoMetric 及其它 2D Metric 看这里）
             if results_list_2d is not None:
-                batch_data_samples[i].pred_instances = None
+                batch_data_samples[i].pred_instances = InstanceData()
                 num_views = batch_data_samples[i].num_views
                 views2d_results = results_list_2d[num_views*i:num_views*i+num_views]
                 batch_data_samples[i].views2d_results = views2d_results
