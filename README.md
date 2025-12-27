@@ -1,6 +1,6 @@
 ## 1. 环境配置 (Environment Setup)
 
-请务必按顺序安装，确保依赖完整：
+请务必按顺序安装，确保依赖完整（参考[MMDetection3D 官方文档](https://mmdetection3d.readthedocs.io/zh-cn/latest/get_started.html)）：
 
 ```bash
 # 1. 创建基础环境
