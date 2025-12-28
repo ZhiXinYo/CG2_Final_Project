@@ -62,7 +62,7 @@ tal_topk = 15  # Number of bbox selected in each level
 tal_alpha = 0.5  # A Hyper-parameter related to alignment_metrics
 tal_beta = 6.0  # A Hyper-parameter related to alignment_metrics
 # TODO: Automatically scale loss_weight based on number of detection layers
-loss_cls_weight = 0.5  # 0.5, 1
+loss_cls_weight = 4  # 0.5, 1, 4
 loss_bbox_weight = 7.5  # 7.5, 1.5
 # Since the dfloss is implemented differently in the official
 # and mmdet, we're going to divide loss_weight by 4.
@@ -136,7 +136,7 @@ model = dict(
         bbox_coder=dict(type='mmyolo.DistancePointBBoxCoder'),
         # scaled based on number of detection layers
         loss_cls=dict(
-            type='mmdet.CrossEntropyLoss',  # mmdet.FocalLoss
+            type='mmdet.FocalLoss',  # mmdet.CrossEntropyLoss, mmdet.FocalLoss
             use_sigmoid=True,
             reduction='none',  # none, sum, mean
             loss_weight=loss_cls_weight),  # loss_cls_weight

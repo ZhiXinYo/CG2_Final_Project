@@ -122,19 +122,19 @@ class NuscenesCocoMetric(CocoMetric):
                 raise KeyError(f'{metric} is not in results')
             try:
                 predictions = load(result_files[metric])
-                # === DEBUG START: BBOX FORMAT CHECK ===
-                if len(predictions) > 0:
-                    logger.info("-" * 30)
-                    logger.info(f"DEBUG: 检测到 {len(predictions)} 个预测框")
-                    sample_p = predictions[0]
-                    logger.info(f"DEBUG: 预测框格式样例: {sample_p}")
-                    # COCO 格式是 [xmin, ymin, width, height]
-                    # 如果 width 或 height 是负数，或者 x2/y2，评估会出错
-                    bbox = sample_p.get('bbox', [])
-                    if len(bbox) == 4:
-                        if bbox[2] < 0 or bbox[3] < 0:
-                            logger.error("!!! 警告: 检测到负的宽度或高度，坐标格式可能错误 !!!")
-                # === DEBUG END: BBOX FORMAT CHECK ===
+                # # === DEBUG START: BBOX FORMAT CHECK ===
+                # if len(predictions) > 0:
+                #     logger.info("-" * 30)
+                #     logger.info(f"DEBUG: 检测到 {len(predictions)} 个预测框")
+                #     sample_p = predictions[0]
+                #     logger.info(f"DEBUG: 预测框格式样例: {sample_p}")
+                #     # COCO 格式是 [xmin, ymin, width, height]
+                #     # 如果 width 或 height 是负数，或者 x2/y2，评估会出错
+                #     bbox = sample_p.get('bbox', [])
+                #     if len(bbox) == 4:
+                #         if bbox[2] < 0 or bbox[3] < 0:
+                #             logger.error("!!! 警告: 检测到负的宽度或高度，坐标格式可能错误 !!!")
+                # # === DEBUG END: BBOX FORMAT CHECK ===
                 if iou_type == 'segm':
                     # Refer to https://github.com/cocodataset/cocoapi/blob/master/PythonAPI/pycocotools/coco.py#L331  # noqa
                     # When evaluating mask AP, if the results contain bbox,
@@ -161,11 +161,11 @@ class NuscenesCocoMetric(CocoMetric):
             coco_eval.params.maxDets = list(self.proposal_nums)
             coco_eval.params.iouThrs = self.iou_thrs
 
-            # === DEBUG START: CATEGORY CHECK ===
-            logger.info(f"DEBUG: 评估器当前使用的 catIds: {coco_eval.params.catIds}")
-            if hasattr(self._coco_api, 'cats'):
-                logger.info(f"DEBUG: GT JSON 中的类别映射: {self._coco_api.cats}")
-            # === DEBUG END: CATEGORY CHECK ===
+            # # === DEBUG START: CATEGORY CHECK ===
+            # logger.info(f"DEBUG: 评估器当前使用的 catIds: {coco_eval.params.catIds}")
+            # if hasattr(self._coco_api, 'cats'):
+            #     logger.info(f"DEBUG: GT JSON 中的类别映射: {self._coco_api.cats}")
+            # # === DEBUG END: CATEGORY CHECK ===
 
             # mapping of cocoEval.stats
             coco_metric_names = {
@@ -205,11 +205,11 @@ class NuscenesCocoMetric(CocoMetric):
                         f'{coco_eval.stats[coco_metric_names[item]]:.3f}')
                     eval_results[item] = val
             else:
-                # === DEBUG START: GT AVAILABILITY CHECK ===
-                # 统计加载进评估器的真值实例总数
-                if hasattr(self._coco_api, 'anns'):
-                    logger.info(f"DEBUG: 真值 JSON (GT) 中的总标注数: {len(self._coco_api.anns)}")
-                # === DEBUG END: GT AVAILABILITY CHECK ===
+                # # === DEBUG START: GT AVAILABILITY CHECK ===
+                # # 统计加载进评估器的真值实例总数
+                # if hasattr(self._coco_api, 'anns'):
+                #     logger.info(f"DEBUG: 真值 JSON (GT) 中的总标注数: {len(self._coco_api.anns)}")
+                # # === DEBUG END: GT AVAILABILITY CHECK ===
                 coco_eval.evaluate()
                 coco_eval.accumulate()
                 coco_eval.summarize()
