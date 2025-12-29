@@ -228,13 +228,14 @@ class YoloPointPainter(MVXTwoStageDetector):
         # ==================== [DIAGNOSE_END] ====================
 
         # ==================== [DIAGNOSE_START: Head 输出检查] ====================
-        cls_logits = head_outputs[0]
+        # cls_logits = head_outputs[0]
         # 检查分类头
         # print(f"  - Head Logits (Stride 8): Mean={cls_logits[0].mean():.4f}, Var={cls_logits[0].var():.4f}")
         # print(f"  - Head Max Logit: {cls_logits[0].max():.4f} | Min Logit: {cls_logits[0].min():.4f}")
         # print("=" * 50 + "\n")
         # ==================== [DIAGNOSE_END] ====================
 
+        pts_feats = None
         # 2D 辅助特征涂色
         points = self.painting(batch_input_metas, points, head_outputs)
 
@@ -258,6 +259,7 @@ class YoloPointPainter(MVXTwoStageDetector):
         device = x[0].device
         target_dtype = x[0].dtype  # 通常是 float16 (FP16) 或 float32
         num_views = batch_data_samples[0].metainfo['num_views']
+        batch_size = len(batch_data_samples)
 
         for sample_idx, sample_3d in enumerate(batch_data_samples):
             base_meta = sample_3d.metainfo
@@ -333,7 +335,8 @@ class YoloPointPainter(MVXTwoStageDetector):
             **kwargs
         )
         self._cache_head_outputs = None
-        return {f'{k}_2d': v / num_views for k, v in img_losses.items()}
+        return {f'{k}_2d': v / (num_views * batch_size) for k, v in img_losses.items()}
+        # return {f'{k}_2d': v for k, v in img_losses.items()}
 
     # def _debug_save_gt_images(self, img_metas, gt_instances, batch_idx):
     #     save_dir = 'debug_gt_boxes_original'
@@ -422,47 +425,44 @@ class YoloPointPainter(MVXTwoStageDetector):
             **kwargs
         )
         self._cache_head_outputs = None
+        for batch_id, sample_3d in enumerate(batch_data_samples):
+            img_paths = sample_3d.metainfo['img_path']
+            # 必须以 img_paths 的顺序来循环，因为 results_list 是按这个顺序排的
+            for view_idx, img_path in enumerate(img_paths):
+                target_idx = batch_id * 6 + view_idx
+                results_list[target_idx].set_metainfo(dict(img_id=os.path.basename(img_path)))
 
+        # results_list = []
         # 2. 【核心修改】注入 img_id。由于没有 'images' 字典，我们直接使用 'img_path'
         # 注意：results_list 是平铺的列表，我们需要按顺序对应到每个 sample 的每个 view
-        idx = 0
-        for sample_3d in batch_data_samples:
-            img_paths = sample_3d.metainfo['img_path']
-
-            for i in range(len(img_paths)):
-                if idx < len(results_list):
-                    # 【修改这里】
-                    # 不要直接用 results_list[idx].img_id = ...
-                    # 使用 set_metainfo 方法，这样它被视为“整张图”的元数据
-                    results_list[idx].set_metainfo(dict(img_id=os.path.basename(img_paths[i])))
-                    # --- [修正后的可视化位置] ---
-                    # 只保存整个 Batch 的第一张图
-                    # if idx == 0:
-                    #     img_path = img_paths[i]
-                    #     img = cv2.imread(img_path)
-                    #
-                    #     if img is not None:
-                    #         # 获取当前的预测实例
-                    #         pred_instances = results_list[idx]
-                    #         bboxes = pred_instances.bboxes
-                    #         scores = pred_instances.scores
-                    #
-                    #         # 打印一下，确保代码确实跑到了这里
-                    #         print(f">>> [DEBUG VIS] Saving first image: {img_path}")
-                    #         print(f">>> [DEBUG VIS] Num boxes detected: {len(bboxes)}")
-                    #
-                    #         for j in range(min(10, len(bboxes))):
-                    #             score = scores[j].item()
-                    #             if score > 0.05:  # 如果还是没图，把这个阈值调成 0.0 试试
-                    #                 b = bboxes[j].cpu().numpy().astype(int)
-                    #                 cv2.rectangle(img, (b[0], b[1]), (b[2], b[3]), (0, 255, 0), 2)
-                    #                 cv2.putText(img, f'{score:.2f}', (b[0], b[1] - 5),
-                    #                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
-                    #
-                    #         cv2.imwrite('val_check_idx0.jpg', img)
-                    #     else:
-                    #         print(f">>> [DEBUG VIS] Error: Could not read image {img_path}")
-                    idx += 1
+        # idx = 0
+        # for batch_id, sample_3d in enumerate(batch_data_samples):
+        #     cam_instances_dict = sample_3d.get('gt_instances').get('cam_instances')
+        #     img_paths = sample_3d.metainfo['img_path']
+        #     # 必须以 img_paths 的顺序来循环，因为 results_list 是按这个顺序排的
+        #     for view_idx, (cam_k, cam_v) in enumerate(cam_instances_dict.items()):
+        #         target_idx = batch_id * 6 + view_idx
+        #         # --- 重新构造 InstanceData ---
+        #         new_instances = InstanceData()
+        #         if len(cam_v) > 0:
+        #             # 这里拿出的 bbox 必须手动缩放且 clamp，否则 AP 依然不是 1
+        #             bboxes = torch.as_tensor([inst['bbox'] for inst in cam_v], device="cuda", dtype=torch.float32)
+        #
+        #             # 这里的 bbox_label 必须检查是否与 Dataset 的类目 ID 一致
+        #             labels = torch.as_tensor([inst['bbox_label'] for inst in cam_v], device="cuda", dtype=torch.long)
+        #             scores = torch.ones(len(cam_v), device="cuda")
+        #
+        #             new_instances.bboxes = bboxes
+        #             new_instances.labels = labels
+        #             new_instances.scores = scores
+        #         else:
+        #             new_instances.bboxes = torch.zeros((0, 4), device="cuda")
+        #             new_instances.labels = torch.zeros((0,), device="cuda", dtype=torch.long)
+        #             new_instances.scores = torch.zeros((0,), device="cuda")
+        #
+        #         # 注入元信息，img_id 必须与评估器加载的数据集 JSON 里的 file_name 完全一致
+        #         new_instances.set_metainfo(dict(img_id=os.path.basename(img_paths[view_idx])))
+        #         results_list.append(new_instances)
         return results_list
 
     def extract_pts_feat(self, voxel_dict, points=None, img_feats=None, batch_input_metas=None):
@@ -517,9 +517,6 @@ class YoloPointPainter(MVXTwoStageDetector):
             results_list_2d = None
 
         # 2. 手动组装返回列表
-        from mmengine.structures import InstanceData
-        import torch
-
         for i in range(len(batch_data_samples)):
             # 挂载 3D 结果（NuScenesMetric 主要看这里）
             if results_list_3d is not None:
@@ -527,20 +524,39 @@ class YoloPointPainter(MVXTwoStageDetector):
 
             # 挂载 2D 结果（CocoMetric 及其它 2D Metric 看这里）
             if results_list_2d is not None:
-                raw_2d = results_list_2d[i]
-
-                # --- 关键操作：分离元数据与张量数据 ---
-                # 1. 提取 ID 到 DataSample 根部 (给 CocoMetric 看)
-                img_id = raw_2d.metainfo.get('img_id', getattr(raw_2d, 'img_id', None))
-                if img_id is not None:
-                    batch_data_samples[i].set_metainfo(dict(img_id=img_id))
-
-                # 2. 过滤出一个纯张量的 InstanceData (给 NuScenesMetric 看，防止 .to('cpu') 崩溃)
-                pure_2d = InstanceData()
-                for key in raw_2d.keys():
-                    if isinstance(raw_2d[key], torch.Tensor):
-                        pure_2d[key] = raw_2d[key]
-
-                batch_data_samples[i].pred_instances = pure_2d
-
+                batch_data_samples[i].pred_instances = InstanceData()
+                num_views = batch_data_samples[i].num_views
+                views2d_results = results_list_2d[num_views*i:num_views*i+num_views]
+                batch_data_samples[i].views2d_results = views2d_results
         return batch_data_samples
+
+    def loss(self, batch_inputs_dict, batch_data_samples, **kwargs):
+        """
+        Args:
+            batch_inputs_dict (dict): The model input dict which include
+                'points' and `imgs` keys.
+
+                - points (list[torch.Tensor]): Point cloud of each sample.
+                - imgs (torch.Tensor): Tensor of batch images, has shape
+                  (B, C, H ,W)
+            batch_data_samples (List[:obj:`Det3DDataSample`]): The Data
+                Samples. It usually includes information such as
+                `gt_instance_3d`, .
+
+        Returns:
+            dict[str, Tensor]: A dictionary of loss components.
+
+        """
+
+        batch_input_metas = [item.metainfo for item in batch_data_samples]
+        img_feats, pts_feats = self.extract_feat(batch_inputs_dict,
+                                                 batch_input_metas)
+        losses = dict()
+        if pts_feats:
+            losses_pts = self.pts_bbox_head.loss(pts_feats, batch_data_samples,
+                                                 **kwargs)
+            losses.update(losses_pts)
+        if img_feats:
+            losses_img = self.loss_imgs(img_feats, batch_data_samples)
+            losses.update(losses_img)
+        return losses

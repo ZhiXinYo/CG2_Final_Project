@@ -16,18 +16,9 @@ persistent_workers = True
 # -----train val related-----
 # Base learning rate for optim_wrapper. Corresponding to 8xb16=64 bs
 base_lr = 0.001
-max_epochs = 30  # Maximum training epochs
+max_epochs = 24  # Maximum training epochs
 # Disable mosaic augmentation for final 10 epochs (stage 2)
 close_mosaic_epochs = 10
-
-model_test_cfg = dict(
-    # The config of multi-label for multi-class prediction.
-    multi_label=True,
-    # The number of boxes before NMS
-    nms_pre=30000,
-    score_thr=0.001,  # Threshold to filter out boxes.
-    nms=dict(type='nms', iou_threshold=0.7),  # NMS type and threshold
-    max_per_img=300)  # Max number of detections of each image
 
 # ========================Possible modified parameters========================
 # -----data related-----
@@ -71,11 +62,11 @@ tal_topk = 15  # Number of bbox selected in each level
 tal_alpha = 0.5  # A Hyper-parameter related to alignment_metrics
 tal_beta = 6.0  # A Hyper-parameter related to alignment_metrics
 # TODO: Automatically scale loss_weight based on number of detection layers
-loss_cls_weight = 0.5
-loss_bbox_weight = 7.5
+loss_cls_weight = 4  # 0.5, 1, 4
+loss_bbox_weight = 7.5  # 7.5, 1.5
 # Since the dfloss is implemented differently in the official
 # and mmdet, we're going to divide loss_weight by 4.
-loss_dfl_weight = 1.5 / 4
+loss_dfl_weight = 1.5 / 4  # 1.5 / 4, 1.5 / 20
 lr_factor = 0.01  # Learning rate scaling factor
 weight_decay = 0.0005
 # Save model checkpoint and validation intervals in stage 1
@@ -131,20 +122,12 @@ model = dict(
         act_cfg=dict(type='SiLU', inplace=True)),
     img_bbox_head=dict(
         type='mmyolo.YOLOv8Head',
-        # 删掉所有复杂的 override，只保留针对特定层类型的初始化
-        # 删掉所有 override！只保留按类定义的初始化
-        # init_cfg=[
-        #     # 1. 把所有卷积层初始化为 Kaiming (这会自动处理 weight)
-        #     dict(type='Kaiming', layer='Conv2d', a=0, mode='fan_in', nonlinearity='leaky_relu'),
-        #     # 2. 把所有归一化层初始化为 Constant
-        #     dict(type='Constant', layer=['_BatchNorm', 'BatchNorm2d'], val=1.0, bias=0.0)
-        # ],
         head_module=dict(
             type='mmyolo.YOLOv8HeadModule',
             num_classes=num_classes,
             in_channels=[256, 512, last_stage_out_channels],
             widen_factor=widen_factor,
-            reg_max=16,
+            reg_max=32,
             norm_cfg=norm_cfg,
             act_cfg=dict(type='SiLU', inplace=True),
             featmap_strides=strides),
@@ -153,21 +136,21 @@ model = dict(
         bbox_coder=dict(type='mmyolo.DistancePointBBoxCoder'),
         # scaled based on number of detection layers
         loss_cls=dict(
-            type='mmdet.FocalLoss',  # mmdet.FocalLoss
+            type='mmdet.FocalLoss',  # mmdet.CrossEntropyLoss, mmdet.FocalLoss
             use_sigmoid=True,
-            reduction='sum',
+            reduction='none',  # none, sum, mean
             loss_weight=loss_cls_weight),  # loss_cls_weight
         loss_bbox=dict(
             type='mmyolo.IoULoss',
             iou_mode='ciou',
             bbox_format='xyxy',
-            reduction='sum',
-            loss_weight=loss_bbox_weight,  # loss_bbox_weight
+            reduction='sum',  # sum, mean
+            loss_weight=loss_bbox_weight,  # loss_bbox_weight 7.5
             return_iou=False),
         loss_dfl=dict(
             type='mmdet.DistributionFocalLoss',
-            reduction='mean',
-            loss_weight=loss_dfl_weight),  # loss_dfl_weight
+            reduction='mean',  # mean
+            loss_weight=loss_dfl_weight),  # loss_dfl_weight 1.5 / 4
         train_cfg=dict(
             assigner=dict(
                 type='mmyolo.BatchTaskAlignedAssigner',
@@ -177,7 +160,15 @@ model = dict(
                 alpha=tal_alpha,
                 beta=tal_beta,
                 eps=1e-9)),
-        test_cfg=model_test_cfg,)
+        test_cfg=dict(
+            # The config of multi-label for multi-class prediction.
+            multi_label=True,
+            # The number of boxes before NMS
+            nms_pre=30000,
+            score_thr=0.001,  # Threshold to filter out boxes. 0.001
+            nms=dict(type='nms', iou_threshold=0.7),  # NMS type and threshold
+            max_per_img=300),  # Max number of detections of each image
+    ),
 )
 
 VERSION = 'v1.0-mini'  # v1.0-mini, v1.0-trainval
@@ -351,7 +342,7 @@ val_evaluator = [
         metric='bbox',
         backend_args=backend_args),
     dict(
-        type='mmdet.CocoMetric',  # 专门评估你的 2D 结果
+        type='NuscenesCocoMetric',  # 专门评估你的 2D 结果
         ann_file='data/nuscenes/nuscenes_2d_val.json',  # 需准备 COCO 格式的 2D 标注
         metric='bbox',
         classwise=True,
@@ -389,7 +380,7 @@ param_scheduler = [
         begin=0,
         end=max_epochs,
         by_epoch=True,
-        milestones=[20, 25],
+        milestones=[20, 23],
         gamma=0.1)
 ]
 
