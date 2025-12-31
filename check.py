@@ -3,12 +3,10 @@ import pickle
 import os
 from tqdm import tqdm
 
-# --- 配置你的数据路径 ---
+# 检查painted点云数据的完整性
 DATA_ROOT = 'data/kitti_painted/'
-# -------------------------
 
 def check_bin_file_dimension(file_path, expected_dim=8):
-    """检查单个.bin文件是否符合预期的维度"""
     if not os.path.exists(file_path):
         print(f"  [ERROR] File not found: {file_path}")
         return False, 0
@@ -18,8 +16,7 @@ def check_bin_file_dimension(file_path, expected_dim=8):
         total_elements = points.shape[0]
         
         if total_elements == 0:
-            # 文件为空，也算是一种异常情况，但可能无害
-            return True, 0 # 暂时标记为OK
+            return True, 0
             
         if total_elements % expected_dim == 0:
             return True, total_elements
@@ -58,7 +55,6 @@ def main():
         for path, elements in bad_scene_files:
             print(f"    - Path: {path}, Total Elements: {elements} (not divisible by 8)")
             
-    # --- 2. 检查数据库 (dbinfos) 点云 ---
     dbinfo_path = os.path.join(DATA_ROOT, 'kitti_dbinfos_train_painted.pkl')
     print(f"\n[Phase 2] Checking GT database point clouds listed in: {dbinfo_path}")
     
@@ -80,8 +76,6 @@ def main():
                 continue
             
             relative_path = info['path']
-            # 注意：dbinfo中的路径可能是相对于DATA_ROOT的，也可能是更具体的
-            # MMDetection3D通常是相对于DATA_ROOT的
             file_path = os.path.join(DATA_ROOT, relative_path)
             
             is_ok, num_elements = check_bin_file_dimension(file_path)
