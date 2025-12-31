@@ -1,6 +1,6 @@
 
 # Fast Segment Anything
-Original github [FastSAM Official code Repository](https://github.com/CASIA-LMC-Lab/FastSAM)
+Original github [FastSAM Official code Repository](https://github.com/CASIA-LMC-Lab/FastSAM).
 
 ## Installation
 
@@ -24,7 +24,7 @@ Install CLIP(Required if the text prompt is being tested.):
 pip install git+https://github.com/openai/CLIP.git
 ```
 
-Download a [model checkpoint](#model-checkpoints).
+Download a model checkpoint from the original repository.
 
 ## Run python code to process image
 
