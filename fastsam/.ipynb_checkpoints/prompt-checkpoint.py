@@ -52,7 +52,7 @@ class FastSAMPrompt:
             annotations.append(annotation)
         return annotations
 
-    def filter_masks(annotations):  # filte the overlap mask
+    def filter_masks(self, annotations):  # filte the overlap mask
         annotations.sort(key=lambda x: x['area'], reverse=True)
         to_remove = set()
         for i in range(0, len(annotations)):
@@ -353,7 +353,7 @@ class FastSAMPrompt:
     @torch.no_grad()
     def retrieve_batch(self, model, preprocess, elements, search_texts: list, device) -> torch.Tensor:
         """
-        Batch版Retrieve：支持输入文本列表，批量计算相似度
+        Batch Retrieve：支持输入文本列表，批量计算相似度
         :param model: CLIP模型
         :param preprocess: CLIP预处理函数
         :param elements: 裁剪区域列表（PIL.Image）
@@ -372,7 +372,7 @@ class FastSAMPrompt:
         # 3. 批量编码文本
         print(search_texts)
         tokenized_texts = clip.tokenize(search_texts).to(device)  # [num_texts, 77]
-        print(tokenized_texts)
+        # print(tokenized_texts)
         text_features = model.encode_text(tokenized_texts)  # [num_texts, 512]
         text_features /= text_features.norm(dim=-1, keepdim=True)
         
@@ -395,8 +395,8 @@ class FastSAMPrompt:
         cropped_images = []
         not_crop = []
         filter_id = []
-        # annotations, _ = filter_masks(annotations)
-        # filter_id = list(_)
+        annotations, _ = self.filter_masks(annotations)
+        filter_id = list(_)
         for _, mask in enumerate(annotations):
             if np.sum(mask['segmentation']) <= 100:
                 filter_id.append(_)
@@ -498,7 +498,7 @@ class FastSAMPrompt:
         H, W = self.img.shape[:2]
         C = len(categories)
 
-        # 1. 初始化输出容器（修正：恢复字典，而非None）
+        # 1. 初始化输出容器
         class_masks = {}
         class_clip_scores = {cat: 0.0 for cat in categories}
         pixel_prob = np.zeros((H, W, C), dtype=np.float32)  # H×W×C概率矩阵（numpy）
@@ -509,11 +509,19 @@ class FastSAMPrompt:
             pixel_prob_tensor = torch.from_numpy(pixel_prob).to(self.device)
             return class_masks, pixel_prob_tensor, class_clip_scores
 
-        # 预裁剪所有mask区域（避免重复裁剪）
+        # 预裁剪所有mask区域
         cropped_boxes, _, _, filter_id, annotations = self._crop_image(format_results)
         if len(cropped_boxes) == 0:
             pixel_prob_tensor = torch.from_numpy(pixel_prob).to(self.device)
             return class_masks, pixel_prob_tensor, class_clip_scores
+
+        for idx, crop_img in enumerate(cropped_boxes):
+            crop_save_path = os.path.join("./images", f"crop_{idx:03d}.png")
+            crop_img.save(crop_save_path)
+            # if idx < len(annotations):
+            #     mask_area = annotations[idx]['area']
+            #     with open(os.path.join(CROP_SAVE_DIR, "crop_info.txt"), "a", encoding="utf-8") as f:
+            #         f.write(f"crop_{idx:03d}: 保存路径={crop_save_path}, mask面积={mask_area}\n")
 
         if not hasattr(self, 'clip_model') or self.clip_model is None:
             self.clip_model, self.clip_preprocess = clip.load('ViT-B/32', device=self.device)
@@ -530,7 +538,7 @@ class FastSAMPrompt:
                                           categories[1:], 
                                           device=self.device
                                          )  # [N, C-1] (torch.Tensor)
-        clip_scores = clip_scores.cpu().numpy()  # 转numpy数组，与pixel_prob类型一致
+        clip_scores = clip_scores.cpu().numpy() 
 
         CLIP_PROB_THRESH = 0  # 0~100
         print(clip_scores)
@@ -554,7 +562,7 @@ class FastSAMPrompt:
 
             pixel_prob[bool_mask, 1:] += clip_scores[crop_idx]  
 
-        # 语义mask：像素的所有前景类得分和>0
+        # 前景语义mask：像素的所有前景类得分和>0
         semantic_mask = pixel_prob.sum(axis=-1) > 0  # (H,W) 布尔数组
 
         if np.any(semantic_mask):
@@ -564,12 +572,12 @@ class FastSAMPrompt:
         pixel_prob[~semantic_mask, :] = 0.0
         pixel_prob[~semantic_mask, 0] = 1.0
 
-        # 可选：生成类别mask（argmax），并赋值给class_masks
+        # 生成类别mask（argmax），并赋值给class_masks
         class_mask = pixel_prob.argmax(axis=-1)  # (H,W)，每个像素的最大概率类别索引
         for c_idx, cat in enumerate(categories):
             class_masks[cat] = (class_mask == c_idx)
 
-        # 补充：计算class_clip_scores（每个类别的平均CLIP得分）
+        # 计算class_clip_scores（每个类别的平均CLIP得分）
         for c_idx, cat in enumerate(categories[1:]):
             class_clip_scores[cat] = float(np.mean(clip_scores[:, c_idx]))
         class_clip_scores[categories[0]] = float(np.mean(pixel_prob[~semantic_mask, 0]))  # 背景类得分
