@@ -7,7 +7,7 @@ _base_ = [
 
 num_classes = 10  # Number of classes for classification
 # Batch size of a single GPU during training
-train_batch_size_per_gpu = 2
+train_batch_size_per_gpu = 16
 # Worker to pre-fetch data for each single GPU during training
 train_num_workers = 4
 # persistent_workers must be False if num_workers is 0
@@ -15,19 +15,19 @@ persistent_workers = True
 
 # -----train val related-----
 # Base learning rate for optim_wrapper. Corresponding to 8xb16=64 bs
-base_lr = 0.001
+base_lr = 0.004
 max_epochs = 24  # Maximum training epochs
 # Disable mosaic augmentation for final 10 epochs (stage 2)
-close_mosaic_epochs = 10
+close_mosaic_epochs = 8
 
 # ========================Possible modified parameters========================
 # -----data related-----
-img_scale = (512, 288)  # width, height  (512, 288)  (1024, 576)
+img_scale = (1024, 576)  # width, height  (512, 288)  (1024, 576)
 # Dataset type, this will be used to define the dataset
 # Batch size of a single GPU during validation
-val_batch_size_per_gpu = 1
+val_batch_size_per_gpu = 4
 # Worker to pre-fetch data for each single GPU during validation
-val_num_workers = 2
+val_num_workers = 4
 
 # Config of batch shapes. Only on val.
 # We tested YOLOv8-m will get 0.02 higher than not using it.
@@ -171,7 +171,7 @@ model = dict(
     ),
 )
 
-VERSION = 'v1.0-mini'  # v1.0-mini, v1.0-trainval
+VERSION = 'v1.0-trainval'  # v1.0-mini, v1.0-trainval
 # 1. 修改输入模态
 input_modality = dict(use_lidar=True, use_camera=True)  # 开启相机
 
@@ -307,7 +307,7 @@ eval_pipeline = [
 # ================= 核心修改 3: 修改数据加载和评估 =================
 
 train_dataloader = dict(
-    batch_size=1,
+    batch_size=8,
     dataset=dict(
         type=dataset_type,  # 显式声明类型
         data_root=data_root,
@@ -362,7 +362,7 @@ optim_wrapper = dict(
 # ================= 验证频率设置 =================
 train_cfg = dict(
     max_epochs=max_epochs,
-    val_interval=2,    # 设置为 1，表示每个 Epoch 结束后都进行验证
+    val_interval=8,    # 设置为 1，表示每个 Epoch 结束后都进行验证
 )
 val_cfg = dict(type='ValLoop')
 test_cfg = dict(type='TestLoop')
@@ -384,6 +384,15 @@ param_scheduler = [
         gamma=0.1)
 ]
 
+
+default_hooks = dict(
+    checkpoint=dict(
+        type='CheckpointHook',
+        interval=4,        # 每4轮保存
+        max_keep_ckpts=4, # 最多保留4个
+        save_best=None
+    )
+)
 # optim_wrapper = dict(type='AmpOptimWrapper', loss_scale=4096.)
 
 # 分别指定预训练权重

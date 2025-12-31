@@ -40,19 +40,14 @@ train_pipeline = [
         backend_args=backend_args),
     dict(type='LoadAnnotations3D', with_bbox_3d=True, with_label_3d=True),
     # dict(type='MultiBinDistanceSampling', 
-    #     #  bin_edges=[0, 20, 35, 50, 70],  # 分为四个区间
-    #     #  keep_rates=[0.25, 0.4, 0.8, 1.0] # 0-20m留25%，20-35m留40%，以此类推
-    #      bin_edges=[0, 30, 70], keep_rates=[0.2, 1.0]
+    #      bin_edges=[0, 20, 35, 50, 70],  # 分为四个区间
+    #      keep_rates=[0.25, 0.4, 0.8, 1.0] # 0-20m留25%，20-35m留40%，以此类推
     # ),
     dict(type='ObjectSample', db_sampler=db_sampler, use_ground_plane=True),
-    # dict(type='SemanticAwareDistanceSampling', 
-    #      dist_threshold=30.0, 
-    #      keep_ratio_bg=0.4,
-    #      feat_channels=4),
     dict(type='ImprovedSADS', 
-         dist_threshold=30.0, 
-         keep_ratio_bg=0.5, 
-         fg_threshold=0.15),
+        dist_threshold=30.0, 
+        keep_ratio_bg=0.5, 
+        fg_threshold=0.15),
     dict(type='RandomFlip3D', flip_ratio_bev_horizontal=0.5),
     dict(
         type='GlobalRotScaleTrans',
@@ -125,8 +120,27 @@ train_dataloader = dict(
 #         metainfo=metainfo,
 #         box_type_3d='LiDAR',
 #         backend_args=backend_args))
-val_dataloader = None
+val_dataloader = dict(
+    dataset=dict(
+        type='KittiDataset',
+        data_root=data_root,
+        data_prefix=dict(pts='training/velodyne_painted_1225'),
+        ann_file='kitti_1225_infos_val.pkl',
+        pipeline=test_pipeline,
+        modality=dict(use_lidar=True, use_camera=False),
+        test_mode=True,
+        metainfo=metainfo,
+        box_type_3d='LiDAR',
+        backend_args=backend_args))
+
 test_dataloader = val_dataloader
+
+val_evaluator = dict(
+    type='KittiMetric',
+    ann_file=data_root + 'kitti_1225_infos_val.pkl',
+    metric='bbox',
+    backend_args=backend_args)
+test_evaluator = val_evaluator
 
 
 model = dict(
@@ -183,22 +197,14 @@ param_scheduler = [
 ]
 
 train_cfg = dict(by_epoch=True, max_epochs=epoch_num, val_interval=999)
-# val_cfg = dict()
-# test_cfg = dict()
-
-val_dataloader = None
-val_evaluator = None
-val_cfg = None
-
-test_dataloader = None
-test_evaluator = None
-test_cfg = None
+val_cfg = dict()
+test_cfg = dict()
 
 default_hooks = dict(
     checkpoint=dict(
         type='CheckpointHook',
         interval=2,        # 每2轮保存
-        max_keep_ckpts=10, # 最多保留10个
+        max_keep_ckpts=25, # 最多保留10个
         save_best=None
     )
 )

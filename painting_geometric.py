@@ -10,11 +10,11 @@ from tqdm import tqdm
 # from mmseg.apis import inference_segmentor, init_segmentor
 import mmcv
 
-import pcdet_utils.calibration_kitti as calibration_kitti
+# import pcdet_utils.calibration_kitti as calibration_kitti
 
 from sklearn.neighbors import NearestNeighbors
 
-TRAINING_PATH = "../detector/data/kitti/training/"
+TRAINING_PATH = "data/kitti/training/"
 TWO_CAMERAS = True
 SEG_NET_OPTIONS = ["deeplabv3", "deeplabv3plus", "hma", "segformer"]
 # TODO choose the segmentation network you want to use, deeplabv3 = 0 deeplabv3plus = 1 hma = 2
@@ -124,7 +124,7 @@ class Painter:
         calib['R0_rect'] = np.zeros([4, 4], dtype=calib['R0'].dtype)
         calib['R0_rect'][3, 3] = 1.
         calib['R0_rect'][:3, :3] = calib['R0']
-        calib['Tr_velo2cam'] = np.concatenate([calib['Tr_velo2cam'], np.array([[0., 0., 0., 1.]])], axis=0)
+        calib['Tr_velo_to_cam'] = np.concatenate([calib['Tr_velo_to_cam'], np.array([[0., 0., 0., 1.]])], axis=0)
         return calib
     
     def create_cyclist(self, augmented_lidar):

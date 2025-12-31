@@ -4,17 +4,14 @@ _base_ = [
     '../_base_/default_runtime.py'
 ]
 
-VERSION = 'v1.0-mini'
+VERSION = 'v1.0-trainval'
 
-# ================= 核心修改 1: 适配 8 维输入 =================
 model = dict(
     pts_voxel_encoder=dict(
-        in_channels=15,  # 覆盖 base 中的 4
+        in_channels=15,
     )
 )
 
-# ================= 核心修改 2: 适配 8 维数据流 =================
-# 注意：必须重新定义整个 pipeline，因为 LoadPointsFromFile 的参数变了
 point_cloud_range = [-50, -50, -5, 50, 50, 3]
 # Using calibration info convert the Lidar-coordinate point cloud range to the
 # ego-coordinate point cloud range could bring a little promotion in nuScenes.
@@ -111,19 +108,17 @@ eval_pipeline = [
     dict(type='Pack3DDetInputs', keys=['points'])
 ]
 
-# ================= 核心修改 3: 修改数据加载和评估 =================
 
 train_dataloader = dict(
     batch_size=2,
     dataset=dict(
-        type=dataset_type,  # 显式声明类型
+        type=dataset_type,
         data_root=data_root,
         ann_file='nuscenes_infos_train.pkl',
         pipeline=train_pipeline,
         metainfo=metainfo,
         modality=input_modality,
         test_mode=False,
-        # 关键修改：通过 data_prefix 指向你涂色后的文件夹
         data_prefix=data_prefix,
     )
 )
@@ -141,10 +136,9 @@ test_dataloader = dict(
         backend_args=backend_args))
 val_dataloader = test_dataloader
 
-# ================= 验证频率设置 =================
 train_cfg = dict(
-    max_epochs=30,
-    val_interval=3,    # 设置为 1，表示每个 Epoch 结束后都进行验证
+    max_epochs=24,
+    val_interval=8,
 )
 
 # optim_wrapper = dict(type='AmpOptimWrapper', loss_scale=4096.)

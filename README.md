@@ -46,13 +46,13 @@ bash get_deeplabv3plus.sh
 ```text
 mmdetection3d/
 ├── checkpoints/                   
-│   └── deeplabv3plus_xxx.pth  <-- [模型权重]
-├── configs_seg/                           <-- [分割配置] 从 mmseg 提取的完整配置包
+│   └── deeplabv3plus_xxx.pth    <-- [模型权重]
+├── configs_seg/                 <-- [分割配置] 从 mmseg 提取的完整配置包
 │   ├── _base_/ ...
 │   └── deeplabv3plus/ ...
 ├── data/
-│   └── kitti/ ...                         <-- 数据集放这里
-├── painting_mmdet3d.py             <-- [核心脚本]
+│   └── kitti/ ...               <-- 数据集放这里
+├── painting_mmdet3d.py          <-- [核心脚本]
 └── ...
 ```
 
@@ -118,6 +118,10 @@ python tools/nus2coco.py
 python tools/train.py configs/pointpainting/yolo_painter_nus.py
 ```
 
-## 7. （改进）稀疏采样
+## 7. （改进）稀疏采样 SADS
 实现在 `my_transforms.py` 中
 训练配置：`configs/pointpillars/pointpainting_plus.py`
+执行训练命令。
+```bash
+python tools/train.py configs/pointpillars/pointpainting_plus.py
+```
